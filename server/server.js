@@ -5,6 +5,7 @@ import 'dotenv/config'
 import connectDB from './config/db.js'
 import * as Sentry from "@sentry/node";
 import { clerkWebhooks } from './controllers/webhooks.js'
+import { Webhook } from "svix";
 
 
 // Initialize Express
@@ -15,6 +16,7 @@ await connectDB()
 
 // Middlewares
 app.use(cors())
+app.use('/webhooks', express.raw({ type: 'application/json' }))
 app.use(express.json())
 
 // Routes
@@ -23,7 +25,26 @@ app.get('/',(req,res)=> res.send("API Working"))
 app.get("/debug-sentry", function mainHandler(req, res) {
   throw new Error("My first Sentry error!");
 });
-app.post('/webhooks',clerkWebhooks)
+
+
+app.post("/webhooks", async (req, res) => {
+  try {
+    const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
+
+    const event = wh.verify(req.body, {
+      "svix-id": req.headers["svix-id"],
+      "svix-timestamp": req.headers["svix-timestamp"],
+      "svix-signature": req.headers["svix-signature"]
+    });
+
+    req.body = event; // very important
+    clerkWebhooks(req, res);
+
+  } catch (err) {
+    console.log("Webhook error:", err.message);
+    return res.status(400).json({ success: false });
+  }
+});
 
 // Port
 const PORT = process.env.PORT || 5000
