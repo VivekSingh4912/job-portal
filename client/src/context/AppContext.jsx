@@ -9,7 +9,7 @@ export const AppContext = createContext()
 
 export const AppContextProvider = (props) => {
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
 
   const {user} = useUser()
   const {getToken} = useAuth()
@@ -54,8 +54,11 @@ const [userApplications, setUserApplications] = useState([])
   // Function to fetch jobs
   const fetchJobs = async () => {
     try {
-      console.log(backendUrl + '/api/jobs') 
-      const {data} = await axios.get(backendUrl+'/api/jobs')
+      if (!backendUrl) {
+        console.warn('VITE_BACKEND_URL not set; using relative API path /api/jobs')
+      }
+      console.log((backendUrl || '') + '/api/jobs')
+      const {data} = await axios.get((backendUrl || '') + '/api/jobs')
       if ( data.success){
         setJobs(data.jobs)
         console.log(data.jobs);
