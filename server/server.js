@@ -4,54 +4,52 @@ import cors from 'cors'
 import 'dotenv/config'
 import connectDB from './config/db.js'
 import * as Sentry from "@sentry/node";
-import { clerkWebhooks } from './controllers/webhooks.js'
-import { Webhook } from "svix";
+import { clerkWebhooks} from './controllers/webhooks.js'
+
+import companyRoutes from './routes/companyRoutes.js'
+import connectCloudinary from './config/cloudinary.js'
+import jobRoutes from './routes/jobRoutes.js'
+import userRoutes from './routes/userRoutes.js'
+import {clerkMiddleware} from '@clerk/express'
 
 
-// Initialize Express
 const app = express()
 
-// Connect to database
+//  Connect DB & Cloudinary
 await connectDB()
+await connectCloudinary()
 
-// Middlewares
+//  Middlewares
 app.use(cors())
-app.use('/webhooks', express.raw({ type: 'application/json' }))
+
+// JSON parser FIRST
 app.use(express.json())
+app.use(clerkMiddleware())
+// RAW only for specific webhook (Clerk)
+app.post('/webhooks', express.raw({ type: 'application/json' }), clerkWebhooks)
+// app.get('/',(req,res)=> res.send("API Working"))
+// app.get('/debug-sentry', function mainHandler(req,res){
+//   throw new Error("My first Sentry error!");
+// });
 
-// Routes
-app.get('/',(req,res)=> res.send("API Working"))
 
-app.get("/debug-sentry", function mainHandler(req, res) {
-  throw new Error("My first Sentry error!");
-});
+// Routes (multer wale)
+app.use('/api/company', companyRoutes)
+app.use('/api/jobs', jobRoutes)
+app.use('/api/users', userRoutes)
 
+// Test route
+app.get('/', (req, res) => res.send("API Working"))
+// app.use('/api/jobs', )
+// Sentry error handler (last mein)
+Sentry.setupExpressErrorHandler(app)
+// optionally: app.use(Sentry.expressErrorHandler())
 
-app.post("/webhooks", async (req, res) => {
-  try {
-    const wh = new Webhook(process.env.CLERK_WEBHOOK_SECRET);
-
-    const event = wh.verify(req.body, {
-      "svix-id": req.headers["svix-id"],
-      "svix-timestamp": req.headers["svix-timestamp"],
-      "svix-signature": req.headers["svix-signature"]
-    });
-
-    req.body = event; // very important
-    clerkWebhooks(req, res);
-
-  } catch (err) {
-    console.log("Webhook error:", err.message);
-    return res.status(400).json({ success: false });
-  }
-});
-
-// Port
+// Start server
 const PORT = process.env.PORT || 5000
 
-Sentry.setupExpressErrorHandler(app);
-
-app.listen(PORT,()=>{
-    console.log(`Server is running on port ${PORT}`);
-    
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`)
 })
+
+
