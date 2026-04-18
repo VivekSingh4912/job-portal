@@ -9,7 +9,8 @@ export const AppContext = createContext()
 
 export const AppContextProvider = (props) => {
 
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || ''
+  const envBackendUrl = import.meta.env.VITE_BACKEND_URL?.trim()
+  const backendUrl = envBackendUrl || (typeof window !== 'undefined' ? window.location.origin : '')
 
   const {user} = useUser()
   const {getToken} = useAuth()
