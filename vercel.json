@@ -19,8 +19,19 @@
       "dest": "/server/server.js"
     },
     {
+      "src": "/webhooks",
+      "dest": "/server/server.js"
+    },
+    {
+      "src": "/",
+      "dest": "/client/dist/index.html"
+    },
+    {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(.*)",
-      "dest": "/client/dist/$1"
+      "dest": "/client/dist/index.html"
     }
   ]
 }
